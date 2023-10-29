@@ -1,0 +1,40 @@
+version: '2.1'
+services:
+  sender: 
+    container_name: sender
+    build: 
+      context: ./sender
+      dockerfile: Dockerfile
+      target: deploy
+    ports: 
+      - 3000:3000
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    links: 
+      - rabbitmq
+  receiver: 
+    container_name: receiver
+    build: 
+      context: ./receiver
+      dockerfile: Dockerfile
+      target: deploy
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    links: 
+      - rabbitmq
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
