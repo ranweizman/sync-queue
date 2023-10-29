@@ -3,7 +3,7 @@
 Start services and wait for all the be fully started: 
 
 ```
-docker-compose up --build -d.
+docker-compose up --build -d
 ```
 
 Trigger message sending: 
