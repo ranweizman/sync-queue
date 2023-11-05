@@ -1,0 +1,62 @@
+#
+# Base image for docker layers
+# 
+FROM node:18-alpine AS base
+
+# Install prerequistes 
+RUN apk add --no-cache libc6-compat
+RUN npm i -g pnpm
+
+# Create non-root user for Docker
+RUN addgroup --system --gid 1001 ran
+RUN adduser --system --uid 1001 ran
+
+#
+# Development phase
+#
+FROM base as development
+
+WORKDIR /app
+ENV NODE_ENV development
+
+# Copy source code into app folder
+COPY --chown=ran:ran . .
+
+RUN pnpm install
+
+# Set Docker as a non-root user
+USER ran
+
+#
+# Production Build
+#
+FROM base as build
+
+WORKDIR /app
+ENV NODE_ENV production
+
+COPY --chown=ran --from=development /app/node_modules ./node_modules
+COPY --chown=ran . .
+
+RUN pnpm build
+RUN pnpm prune --prod
+
+# Set Docker as a non-root user
+USER ran
+
+#
+# Production Server
+#
+FROM base as prod
+
+WORKDIR /app
+ENV NODE_ENV production
+
+# Copy only the necessary files
+COPY --chown=ran --from=build /app/dist ./dist/
+COPY --chown=ran --from=build /app/node_modules ./node_modules
+
+# Set Docker as non-root user
+USER ran
+
+CMD ["node", "dist/main.js"]
